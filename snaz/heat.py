@@ -1,67 +1,36 @@
-#!/usr/bin/python
-
-import matplotlib.image
-img = matplotlib.image.imread('map.png')
-
-minlat, maxlat = 32.0517, 32.1042
-minlng, maxlng = 34.7573, 34.8199
-extent = [minlng, maxlng, minlat, maxlat]
-
-from matplotlib import pyplot as plt
-plt.imshow(img, extent=extent)
-
-from random import uniform
-def randlatlng():
-    return uniform(minlat, maxlat), uniform(minlng, maxlng)
+#!/usr/bin/python3
 
 import numpy as np
-samples = 50
-x = np.linspace(minlng, maxlng, samples)
-y = np.linspace(maxlat, minlat, samples)
-x, y = np.meshgrid(x, y)
-color = np.zeros(x.shape)
+from scipy.interpolate import griddata
 
-# More controlled, smooth heatmap
-from matplotlib import mlab
-color -= mlab.bivariate_normal(x, y, 0.001, 0.001, minlng, minlat)
+coords = [
+    [0, 0],
+    [0, 100],
+    [100, 0],
+    [100, 100],
+    [.5, .1],
+    [1, 1],
+    [40, 31],
+    [1, 1],
+]
+x, y= [x for x, y in coords], [y for x, y in coords]
+minlng, maxlng = min(x), max(x)
+minlat, maxlat = min(y), max(y)
+extent = [minlng, maxlng, minlat, maxlat]
 
-color += mlab.bivariate_normal(x, y, 0.001, 0.001, maxlng, maxlat)
+z = np.random.randn(len(coords)) + 10
 
-color += mlab.bivariate_normal(x, y, 0.001, 0.001, 34.78981, 32.08687)
+xi = np.linspace(minlng, maxlng, 300)
+yi = np.linspace(minlat, maxlat, 300)
+zi = griddata((x, y), z, (xi[None,:], yi[:,None]), method='cubic')
 
-import matplotlib.colors
-cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
-    name='coldhot',
-    colors = [
-        (0, 0, 0.7, 1),
-        (0, 0, 1, 1),
-        (0, 1, 1, 0.5),
-        (1, 1, 1, 0.5),
-        (1, 1, 0, 0.5),
-        (1, 0, 0, 1),
-        (0.7, 0, 0, 1)
-    ], N=700
-)
+from matplotlib import pyplot as plt, image
 
-plt.imshow(color, cmap=cmap, alpha=0.5, extent=extent)
+plt.contourf(xi, yi, zi, 15, extent=extent, cmap=plt.cm.spectral, alpha=0.5)
+plt.imshow(image.imread('map.png'), extent=extent)
 
 cb = plt.colorbar()
 cb.set_alpha(1)
 cb.draw_all()
-
-from sys import path
-path.append('../')
-from router import Router
-cnt = 0
-while True:
-    print(cnt),
-    r = Router(randlatlng(), randlatlng())
-    p = (r.getPath())
-    xs, ys = [x for x, y in p], [y for x, y in p]
-    if len(xs) > 1:
-        plt.plot(ys, xs, alpha=0.5)
-        plt.pause(0.1)
-        cnt += 1
-        if 50 == cnt: break
 
 plt.show()
